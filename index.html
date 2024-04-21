@@ -17,9 +17,14 @@
     <script src="https://unpkg.com/dayjs/dayjs.min.js"></script>
 
     <style>
+        #app {
+            margin: auto;
+            width: 1%;
+            min-width: 650px;
+        }
+
         .my-form {
             width: 600px;
-            margin-left: 10%;
         }
 
         :deep(.red-text) {
@@ -35,7 +40,8 @@
 </head>
 
 <body>
-    <div id="app">{{ message }}
+    <div id="app">
+        {{ message }}
         <div>
             <el-form :model="form" class="my-form" label-width="150px" label-position="left">
                 <el-form-item label="长钱账户">
