@@ -216,120 +216,6 @@
                 let result = runMonteCarloSimulations(portfolioReturn, portfolioVolatility, monthlyInvestment, totalMonth, form.value.isOneTimeInvestment, numSimulations);
 
                 console.log(result);
-
-
-                let monthlyValues = result.monthlyValues;
-                // 首先，初始化series数组，该数组将包含所有模拟的数据
-                let series = [];
-
-                // 循环遍历每次模拟
-                let CumulativeOffset = [];
-                // F8EFFF
-                // EFDBFF
-                // D3ADF7
-                // B889EA
-                // 9F69E2
-                // 8049C6
-                // 531DAB
-                // 391085
-                // 22075E
-                let colorList = ['rgba(255, 255, 255, 0)', '#EFDBFF', '#B889EA', '#8049C6', '#8049C6', '#B889EA', '#EFDBFF',];
-                for (let i = 1; i <= 99;) {
-                    let seriesData = [];
-                    let lastValue = 0;
-                    for (let m = 0; m < monthlyValues.length; m++) {
-                        lastValue = monthlyValues[m][(i / 100.0 * monthlyValues[m].length).toFixed(0)];
-                        // seriesData.push(lastValue - data.costList[m]); //非累积
-                        if (CumulativeOffset.length == m) {
-                            seriesData.push(lastValue);
-                            CumulativeOffset.push(lastValue);
-                        } else {
-                            seriesData.push(lastValue - CumulativeOffset[m]);
-                            CumulativeOffset[m] = lastValue;
-                        }
-                    }
-                    let xirrTransactions = [];
-                    result.xirrTransactions.forEach(element => {
-                        xirrTransactions.push({ amount: element.amount, date: element.date });
-                    });
-                    xirrTransactions[xirrTransactions.length - 1].amount = lastValue;
-                    let xirr = calcualteXirr(xirrTransactions);
-                    let name = "中间";
-                    if (i < 50)
-                        name = "差" + i + "%";
-                    if (i > 50)
-                        name = "优" + (100 - i) + "%";
-                    name += " 收益" + ((lastValue - result.costList[result.costList.length - 1]) / 10000).toFixed(0) + "万" + "\n" +
-                        "XIRR: " + (xirr * 100).toFixed(2) + "%"
-                    // 每次模拟的数据将是一个新对象
-                    let seriesObj = {
-                        name: i + "%", // 为每个模拟创建一个名称，如"Simulation 1"
-                        type: 'line', // 图表类型是折线图
-                        data: seriesData, // 数据是这个模拟每个月末的价值
-                        smooth: false, // 如果你希望线条平滑可以设置为true
-                        showSymbol: false, // 不显示数据点的符号
-                        endLabel: {
-                            show: true,
-                            formatter: function () {
-                                return name;
-                            }
-                        },
-                        stack: 'Total',
-                        itemStyle: { color: 'rgba(255, 255, 255, 0.3)' },
-                        areaStyle: {
-                            color: colorList[series.length],
-                            opacity: 1,
-                        },
-                    };
-
-                    // 将这个对象添加到series数组中
-                    series.push(seriesObj);
-
-                    switch (i) {
-                        case 1:
-                            i = 5;
-                            break;
-                        case 5:
-                            i = 20;
-                            break;
-                        case 20:
-                            i = 50;
-                            break;
-                        case 50:
-                            i = 80;
-                            break;
-                        case 80:
-                            i = 95;
-                            break;
-                        case 95:
-                            i = 99;
-                            break;
-                        case 99:
-                            i = 100;
-                            break;
-                    }
-                }
-                {
-                    let seriesObj = {
-                        name: "cost", // 为每个模拟创建一个名称，如"Simulation 1"
-                        type: 'line', // 图表类型是折线图
-                        data: result.costList, // 数据是这个模拟每个月末的价值
-                        smooth: false, // 如果你希望线条平滑可以设置为true
-                        showSymbol: false, // 不显示数据点的符号
-                        endLabel: {
-                            show: false,
-                            formatter: function () {
-                                return "成本" + (result.costList[result.costList.length - 1] / 10000).toFixed(0) + "万)";
-                            }
-                        },
-                        itemStyle: { color: '#D9333B' },
-                    };
-
-                    // 将这个对象添加到series数组中
-                    series.push(seriesObj);
-                }
-                console.log(series);
-                result.series = series;
                 option.value = getChartsOption(result);
                 message.value = "Done";
             };
@@ -460,6 +346,124 @@
 
             const getChartsOption = (data) => {
                 let monthlyValues = data.monthlyValues;
+
+                // 首先，初始化series数组，该数组将包含所有模拟的数据
+                let series = [];
+
+                // 循环遍历每次模拟
+                let CumulativeOffset = [];
+                // F8EFFF
+                // EFDBFF
+                // D3ADF7
+                // B889EA
+                // 9F69E2
+                // 8049C6
+                // 531DAB
+                // 391085
+                // 22075E
+                let colorList = ['rgba(255, 255, 255, 0)', '#EFDBFF', '#B889EA', '#8049C6', '#8049C6', '#B889EA', '#EFDBFF',];
+                for (let i = 1; i <= 99;) {
+                    let seriesData = [];
+                    let lastValue = 0;
+                    for (let m = 0; m < monthlyValues.length; m++) {
+                        lastValue = monthlyValues[m][(i / 100.0 * monthlyValues[m].length).toFixed(0)];
+                        // seriesData.push(lastValue - data.costList[m]); //非累积
+                        if (CumulativeOffset.length == m) {
+                            seriesData.push(lastValue);
+                            CumulativeOffset.push(lastValue);
+                        } else {
+                            seriesData.push(lastValue - CumulativeOffset[m]);
+                            CumulativeOffset[m] = lastValue;
+                        }
+                    }
+                    let xirrTransactions = [];
+                    data.xirrTransactions.forEach(element => {
+                        xirrTransactions.push({ amount: element.amount, date: element.date });
+                    });
+                    xirrTransactions[xirrTransactions.length - 1].amount = lastValue;
+                    let xirr = calcualteXirr(xirrTransactions);
+                    let name = "中间";
+                    if (i < 50)
+                        name = "差" + i + "%";
+                    if (i > 50)
+                        name = "优" + (100 - i) + "%";
+                    name += " 收益" + ((lastValue - data.costList[data.costList.length - 1]) / 10000).toFixed(0) + "万" + "\n" +
+                        "XIRR: " + (xirr * 100).toFixed(2) + "%"
+                    // 每次模拟的数据将是一个新对象
+                    let seriesObj = {
+                        name: i + "%", // 为每个模拟创建一个名称，如"Simulation 1"
+                        type: 'line', // 图表类型是折线图
+                        data: seriesData, // 数据是这个模拟每个月末的价值
+                        smooth: false, // 如果你希望线条平滑可以设置为true
+                        showSymbol: false, // 不显示数据点的符号
+                        endLabel: {
+                            show: true,
+                            formatter: function () {
+                                return name;
+                            }
+                        },
+                        labelLayout: {
+                            moveOverlap: 'shiftY',   //设置这个配置项之后标签不在重叠
+                        },
+                        stack: 'Total',
+                        itemStyle: { color: 'rgba(255, 255, 255, 0.3)' },
+                        areaStyle: {
+                            color: colorList[series.length],
+                            opacity: 1,
+                        },
+                    };
+
+                    // 将这个对象添加到series数组中
+                    series.push(seriesObj);
+
+                    switch (i) {
+                        case 1:
+                            i = 5;
+                            break;
+                        case 5:
+                            i = 20;
+                            break;
+                        case 20:
+                            i = 50;
+                            break;
+                        case 50:
+                            i = 80;
+                            break;
+                        case 80:
+                            i = 95;
+                            break;
+                        case 95:
+                            i = 99;
+                            break;
+                        case 99:
+                            i = 100;
+                            break;
+                    }
+                }
+                {
+                    let seriesObj = {
+                        name: "cost", // 为每个模拟创建一个名称，如"Simulation 1"
+                        type: 'line', // 图表类型是折线图
+                        data: data.costList, // 数据是这个模拟每个月末的价值
+                        smooth: false, // 如果你希望线条平滑可以设置为true
+                        showSymbol: false, // 不显示数据点的符号
+                        endLabel: {
+                            show: false,
+                            formatter: function () {
+                                return "成本" + (data.costList[data.costList.length - 1] / 10000).toFixed(0) + "万)";
+                            }
+                        },
+                        labelLayout: {
+                            moveOverlap: 'shiftY',   //设置这个配置项之后标签不在重叠
+                        },
+                        itemStyle: { color: '#D9333B' },
+                    };
+
+                    // 将这个对象添加到series数组中
+                    series.push(seriesObj);
+                }
+                console.log(series);
+
                 if (monthlyValues == null) return {};
 
                 let o = {
@@ -477,15 +481,19 @@
                         text: data.msg,
                     },
                     // tooltip: {
-                    //     trigger: 'axis'
+                    //     trigger: 'axis',
+                    //     valueFormatter: (value) => {
+                    //         // console.log(value);
+                    //         return parseFloat(value).toFixed(0);
+                    //     },
                     // },
                     // legend: {
-                    //     data: ['1%', '10%', '30%', '50%', '70%', '90%', '99%']
+                    //     data: ['1%', '5%', '20%', '50%', '80%', '95%', '99%']
                     // },
                     grid: {
                         left: '0%',
                         right: '120px',
-                        bottom: '0%',
+                        bottom: '1%',
                         containLabel: true
                     },
                     xAxis: {
@@ -506,7 +514,7 @@
                             }
                         }
                     },
-                    series: data.series,/* 根据simulations计算出的分位数数据构建的series数组 */
+                    series: series,/* 根据simulations计算出的分位数数据构建的series数组 */
                 };
                 console.log(o);
                 return o;
