@@ -20,7 +20,7 @@
         #app {
             margin: auto;
             width: 1%;
-            min-width: 650px;
+            min-width: 810px;
         }
 
         .my-form {
@@ -41,7 +41,7 @@
 
 <body>
     <div id="app">
-        {{ message }}
+        <el-text type="primary">{{ message }}</el-text>
         <div>
             <el-form :model="form" class="my-form" label-width="150px" label-position="left">
                 <el-form-item label="长钱账户">
@@ -82,6 +82,8 @@
                     <el-button type="primary" @click="onDoCalculate(10000 * 3)">计算</el-button>
                 </el-form-item>
             </el-form>
+            <el-text>参考资料： 有知有行《养老配置方案投资结果分布说明》<el-link type="primary" href="https://youzhiyouxing.cn/n/materials/1656"
+                    target="_blank">https://youzhiyouxing.cn/n/materials/1656</el-link></el-text>
             <e-charts ref="chartRef" class="chart" :option="option" :autoresize=true />
         </div>
     </div>
