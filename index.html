@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-Hans-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>InvestmentResultSimulation</title>
+    <!-- Import style -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <!-- Import Vue 3 -->
+    <!-- <script src="//unpkg.com/vue@3"></script> -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Import component library -->
+    <script src="https://unpkg.com/element-plus"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-echarts@latest"></script>
+    <script src="https://unpkg.com/dayjs/dayjs.min.js"></script>
+
+    <style>
+        .my-form {
+            width: 600px;
+            margin-left: 10%;
+        }
+
+        :deep(.red-text) {
+            color: red;
+        }
+
+        .chart {
+            /* min-height: 100px; */
+            height: 1000px;
+            width: 800px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">{{ message }}
+        <div>
+            <el-form :model="form" class="my-form" label-width="150px" label-position="left">
+                <el-form-item label="长钱账户">
+                    <el-input class="my-input" v-model="form.cqzh" />
+                </el-form-item>
+                <el-form-item label=" 稳钱账户">
+                    <el-input class="my-input" v-model="form.wqzh" />
+                </el-form-item>
+                <el-form-item label="海外长钱">
+                    <el-input class="my-input" v-model="form.hwcq" />
+                </el-form-item>
+                <el-form-item label="投资标的比例">
+                    <el-form-item label="A股整体">
+                        <el-input class="my-input" v-model="form.accountRate1" />
+                    </el-form-item>
+                    <el-form-item label="中国债券">
+                        <el-input class="my-input" v-model="form.accountRate2" />
+                    </el-form-item>
+                    <el-form-item label="标普500">
+                        <el-input class="my-input" v-model="form.accountRate3" />
+                    </el-form-item>
+                    <el-form-item label="海外债券">
+                        <el-input class="my-input" v-model="form.accountRate4" />
+                    </el-form-item>
+                    <el-form-item>
+                        <span>{{ formAdjust.accountRateList }}</span>
+                    </el-form-item>
+                </el-form-item>
+                <el-form-item label="投资时长（年）">
+                    <el-input class="my-input" v-model="form.investmentYears" />
+                </el-form-item>
+                <el-form-item label="一次性投入/定投">
+                    <el-switch v-model="form.isOneTimeInvestment" inline-prompt size="large"
+                        style="--el-switch-on-color: var(--el-color-success); --el-switch-off-color: var(--el-color-primary)"
+                        active-text="&nbsp;一次性投入&nbsp;" inactive-text="&nbsp;月定投&nbsp;" />
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="onDoCalculate(10000 * 3)">计算</el-button>
+                </el-form-item>
+            </el-form>
+            <e-charts ref="chartRef" class="chart" :option="option" :autoresize=true />
+        </div>
+    </div>
+</body>
+<script>
+    const { createApp, ref, watch, computed } = Vue;
+    dayjs().format();
+    // const dayjs = dayjs();
+    createApp({
+        setup() {
+            const message = ref('Hello!');
+
+            const form = ref({
+                cqzh: 70,
+                wqzh: 20,
+                hwcq: 10,
+                accountRate1: 0,
+                accountRate2: 0,
+                accountRate3: 0,
+                accountRate4: 0,
+                isOneTimeInvestment: false,
+                investmentYears: 10,
+            });
+            const formAdjust = ref({
+                cqzh: form.value.cqzh,
+                wqzh: form.value.wqzh,
+                hwcq: form.value.hwcq,
+                accountRateList: "",
+            });
+            const chartRef = ref();
+            const option = ref({});
+
+            watch(() => form, () => {
+                if (form.value.cqzh != formAdjust.value.cqzh ||
+                    form.value.wqzh != formAdjust.value.wqzh ||
+                    form.value.hwcq != formAdjust.value.hwcq
+                ) {
+                    if (form.value.cqzh + form.value.wqzh + form.value.hwcq != 100) {
+                        if (form.value.hwcq != formAdjust.value.hwcq) {
+                            formAdjust.value.cqzh = 100 - form.value.hwcq - form.value.wqzh;
+                            form.value.cqzh = formAdjust.value.cqzh;
+                            formAdjust.value.wqzh = form.value.wqzh;
+                            formAdjust.value.hwcq = form.value.hwcq;
+                        } else {
+                            formAdjust.value.hwcq = 100 - form.value.cqzh - form.value.wqzh;
+                            formAdjust.value.cqzh = form.value.cqzh;
+                            formAdjust.value.wqzh = form.value.wqzh;
+                            form.value.hwcq = formAdjust.value.hwcq;
+                        }
+                        calculateAccountRate();
+                    }
+                } else {
+                    try {
+                        let accountRateList = [
+                            Number(form.value.accountRate1),
+                            Number(form.value.accountRate2),
+                            Number(form.value.accountRate3),
+                            Number(form.value.accountRate4)
+                        ];
+                        let total = 0;
+                        accountRateList.forEach(element => {
+                            total += element;
+                        });
+                        if (total == 1)
+                            formAdjust.value.accountRateList = JSON.stringify(accountRateList);
+                    } catch { }
+                }
+            }, { deep: true });
+
+            const calculateAccountRate = () => {
+                //长稳海组合各自对底层的权重系数
+                let weightsSet = [
+                    [0.65, 0.35, 0, 0],
+                    [0.15, 0.85, 0, 0],
+                    [0, 0, 0.70, 0.30]
+                ];
+                let accountRateList = [0, 0, 0, 0];
+                for (let i = 0; i < 4; i++) {
+                    accountRateList[i] += weightsSet[0][i] * formAdjust.value.cqzh / 100;
+                    accountRateList[i] += weightsSet[1][i] * formAdjust.value.wqzh / 100;
+                    accountRateList[i] += weightsSet[2][i] * formAdjust.value.hwcq / 100;
+                }
+                if (formAdjust.value.accountRateList != JSON.stringify(accountRateList)) {
+                    form.value.accountRate1 = accountRateList[0];
+                    form.value.accountRate2 = accountRateList[1];
+                    form.value.accountRate3 = accountRateList[2];
+                    form.value.accountRate4 = accountRateList[3];
+                    formAdjust.value.accountRateList = JSON.stringify(accountRateList);
+                }
+            }
+            calculateAccountRate();
+
+            const onDoCalculate = (numSimulations) => {
+                message.value = "计算中，当前页面会失去响应，请耐心等待";
+                option.value = {};
+                window.setTimeout(() => { onDoCalculate2(numSimulations); }, 10);
+            }
+            const onDoCalculate2 = (numSimulations) => {
+                let totalMonth = 12 * form.value.investmentYears; // 投资总月数
+                let monthlyInvestment = form.value.isOneTimeInvestment ? 10000 * totalMonth : 10000; // 每月投资金额
+
+                // 已知条件
+                let expectedReturns = [0.09, 0.025, 0.10, 0.02]; // 年化收益率
+                let volatilities = [0.35, 0.0338, 0.20, 0.064]; // 年化波动率
+                let correlations = [ // 相关系数矩阵
+                    [1.00, -0.44, 0.36, 0.38],
+                    [-0.44, 1.00, -0.53, -0.27],
+                    [0.36, -0.53, 1.00, 0.31],
+                    [0.38, -0.27, 0.31, 1.00],
+                ];
+                let weightOfAccount = JSON.parse(formAdjust.value.accountRateList); // 权重
+
+                // 计算组合预期收益率
+                let portfolioReturn = calculatePortfolioReturn(expectedReturns, weightOfAccount);
+
+                // 计算组合波动率（标准差）
+                let portfolioVolatility = calculatePortfolioVolatility(volatilities, correlations, weightOfAccount);
+
+                console.log("预期组合年收益率: ", portfolioReturn);
+                console.log("预期组合年波动率: ", portfolioVolatility);
+
+                //转换为月
+                portfolioReturn = Math.pow((portfolioReturn + 1), 1.0 / 12) - 1;
+                // portfolioReturn = portfolioReturn / 12;
+                portfolioVolatility = portfolioVolatility / Math.sqrt(12);
+
+                console.log("预期组合月收益率: ", portfolioReturn);
+                console.log("预期组合月波动率: ", portfolioVolatility);
+
+                let result = runMonteCarloSimulations(portfolioReturn, portfolioVolatility, monthlyInvestment, totalMonth, form.value.isOneTimeInvestment, numSimulations);
+
+                console.log(result);
+
+
+                let monthlyValues = result.monthlyValues;
+                // 首先，初始化series数组，该数组将包含所有模拟的数据
+                let series = [];
+
+                // 循环遍历每次模拟
+                let CumulativeOffset = [];
+                // F8EFFF
+                // EFDBFF
+                // D3ADF7
+                // B889EA
+                // 9F69E2
+                // 8049C6
+                // 531DAB
+                // 391085
+                // 22075E
+                let colorList = ['rgba(255, 255, 255, 0)', '#EFDBFF', '#B889EA', '#8049C6', '#8049C6', '#B889EA', '#EFDBFF',];
+                for (let i = 1; i <= 99;) {
+                    let seriesData = [];
+                    let lastValue = 0;
+                    for (let m = 0; m < monthlyValues.length; m++) {
+                        lastValue = monthlyValues[m][(i / 100.0 * monthlyValues[m].length).toFixed(0)];
+                        // seriesData.push(lastValue - data.costList[m]); //非累积
+                        if (CumulativeOffset.length == m) {
+                            seriesData.push(lastValue);
+                            CumulativeOffset.push(lastValue);
+                        } else {
+                            seriesData.push(lastValue - CumulativeOffset[m]);
+                            CumulativeOffset[m] = lastValue;
+                        }
+                    }
+                    let xirrTransactions = [];
+                    result.xirrTransactions.forEach(element => {
+                        xirrTransactions.push({ amount: element.amount, date: element.date });
+                    });
+                    xirrTransactions[xirrTransactions.length - 1].amount = lastValue;
+                    let xirr = calcualteXirr(xirrTransactions);
+                    let name = "中间";
+                    if (i < 50)
+                        name = "差" + i + "%";
+                    if (i > 50)
+                        name = "优" + (100 - i) + "%";
+                    name += " 收益" + ((lastValue - result.costList[result.costList.length - 1]) / 10000).toFixed(0) + "万" + "\n" +
+                        "XIRR: " + (xirr * 100).toFixed(2) + "%"
+                    // 每次模拟的数据将是一个新对象
+                    let seriesObj = {
+                        name: i + "%", // 为每个模拟创建一个名称，如"Simulation 1"
+                        type: 'line', // 图表类型是折线图
+                        data: seriesData, // 数据是这个模拟每个月末的价值
+                        smooth: false, // 如果你希望线条平滑可以设置为true
+                        showSymbol: false, // 不显示数据点的符号
+                        endLabel: {
+                            show: true,
+                            formatter: function () {
+                                return name;
+                            }
+                        },
+                        stack: 'Total',
+                        itemStyle: { color: 'rgba(255, 255, 255, 0.3)' },
+                        areaStyle: {
+                            color: colorList[series.length],
+                            opacity: 1,
+                        },
+                    };
+
+                    // 将这个对象添加到series数组中
+                    series.push(seriesObj);
+
+                    switch (i) {
+                        case 1:
+                            i = 5;
+                            break;
+                        case 5:
+                            i = 20;
+                            break;
+                        case 20:
+                            i = 50;
+                            break;
+                        case 50:
+                            i = 80;
+                            break;
+                        case 80:
+                            i = 95;
+                            break;
+                        case 95:
+                            i = 99;
+                            break;
+                        case 99:
+                            i = 100;
+                            break;
+                    }
+                }
+                {
+                    let seriesObj = {
+                        name: "cost", // 为每个模拟创建一个名称，如"Simulation 1"
+                        type: 'line', // 图表类型是折线图
+                        data: result.costList, // 数据是这个模拟每个月末的价值
+                        smooth: false, // 如果你希望线条平滑可以设置为true
+                        showSymbol: false, // 不显示数据点的符号
+                        endLabel: {
+                            show: false,
+                            formatter: function () {
+                                return "成本" + (result.costList[result.costList.length - 1] / 10000).toFixed(0) + "万)";
+                            }
+                        },
+                        itemStyle: { color: '#D9333B' },
+                    };
+
+                    // 将这个对象添加到series数组中
+                    series.push(seriesObj);
+                }
+                console.log(series);
+                result.series = series;
+                option.value = getChartsOption(result);
+                message.value = "Done";
+            };
+
+            // 计算组合预期收益率
+            const calculatePortfolioReturn = (expectedReturns, weightOfAccount) => {
+                return expectedReturns.reduce((acc, currentReturn, i) => {
+                    return acc + (currentReturn * weightOfAccount[i]);
+                }, 0);
+            }
+
+            // 计算组合波动率（标准差）
+            // 这里使用标准公式，其中包括资产的波动率和资产间的协方差
+            const calculatePortfolioVolatility = (volatilities, correlations, weightOfAccount) => {
+                let portfolioVolatility = 0;
+                for (let i = 0; i < volatilities.length; i++) {
+                    for (let j = 0; j < volatilities.length; j++) {
+                        let cov = (i === j) ? volatilities[i] ** 2 : correlations[i][j] * volatilities[i] * volatilities[j];
+                        portfolioVolatility += weightOfAccount[i] * weightOfAccount[j] * cov;
+                    }
+                }
+                return Math.sqrt(portfolioVolatility);
+            }
+
+            const calcualteXirr = (transactions) => {
+                let lowRate = -1.0;
+                let highRate = 1.0;
+                const maxEpsilon = 0.000001; // 收敛误差阈值
+                const maxIterations = 100; // 最大迭代次数
+                let dates = [];
+                let values = [];
+
+                // 准备数据，分开日期和现金流量
+                transactions.forEach((transaction) => {
+                    dates.push(transaction.date);
+                    values.push(transaction.amount);
+                });
+
+                // 计算总天数
+                function totalDays(date1, date2) {
+                    return date2.diff(date1, "day");
+                }
+
+                // 计算现金流量的净现值（NPV）
+                function npv(rate) {
+                    return values.reduce((acc, val, idx) => {
+                        return acc + (val / Math.pow(1 + rate, totalDays(dates[0], dates[idx]) / 365));
+                    }, 0);
+                }
+
+                // 二分法搜索
+                for (let i = 0; i < maxIterations; i++) {
+                    const midRate = (lowRate + highRate) / 2;
+                    const npvMid = npv(midRate);
+
+                    if (Math.abs(npvMid) < maxEpsilon) {
+                        return midRate;
+                    }
+
+                    // 调整搜索范围
+                    if (npvMid > 0) {
+                        lowRate = midRate;
+                    } else {
+                        highRate = midRate;
+                    }
+                }
+                throw new Error('XIRR not found');
+            };
+
+            //蒙特卡罗模拟
+            const runMonteCarloSimulations = (portfolioReturn, portfolioVolatility,
+                monthlyInvestment, totalMonths, isOneTimeInvestment, numSimulations = 10000) => {
+                let finalValues = [];  // 存储每次模拟的最终价值
+                let monthlyValues = [];// 存储每月的每次模拟的月末价值
+
+                let xirrTransactions = [];
+                for (let month = 0; month <= totalMonths; month++) {
+                    monthlyValues.push([]);
+                    if (month == 0 || (!isOneTimeInvestment && month < totalMonths))
+                        xirrTransactions.push({ amount: -monthlyInvestment, date: dayjs().add(month, 'month') });
+                }
+                xirrTransactions.push({ amount: 0, date: dayjs().add(totalMonths, 'month') });
+
+                // 模拟每个月的投资收益
+                for (let sim = 0; sim < numSimulations; sim++) {
+                    let futureValue = monthlyInvestment;
+                    monthlyValues[0].push(futureValue);
+                    for (let month = 1; month <= totalMonths; month++) {
+                        // 模拟的月收益率是正态分布，其中期望值为月度收益率，标准差为月度波动率。
+                        let monthlyReturn = portfolioReturn + portfolioVolatility * randomNormal();
+                        futureValue *= 1 + monthlyReturn;
+                        monthlyValues[month].push(futureValue);
+                        if (!isOneTimeInvestment && month < totalMonths)
+                            futureValue += monthlyInvestment;
+                    }
+                    finalValues.push(futureValue);
+                }
+
+                finalValues.sort((a, b) => a - b);
+                let costList = [];
+                for (let month = 0; month <= totalMonths; month++) {
+                    monthlyValues[month].sort((a, b) => a - b);
+                    costList.push(isOneTimeInvestment ? monthlyInvestment : monthlyInvestment * Math.min(month + 1, totalMonths));
+                }
+                let result = {
+                    finalValues: finalValues,
+                    monthlyValues: monthlyValues,
+                    xirrTransactions: xirrTransactions,
+                    costList: costList,
+                    msg: (form.value.isOneTimeInvestment ? "一次性投入" : "月定投") +
+                        " 投资" + form.value.investmentYears + "年" +
+                        " 总成本" + (costList[costList.length - 1] / 10000).toFixed(0) + "万",
+                };
+                for (let i = 0.05; i < 1; i += 0.45) {
+                    let a = finalValues[(i * numSimulations).toFixed(0)];
+                    result["V_" + (i * 100).toString().padStart(2, "0") + "_Percentile"] = a.toFixed(0) + ", " + (a / monthlyInvestment / (isOneTimeInvestment ? 1 : totalMonths) * 100).toFixed(2) + "%"
+                }
+                return result;
+            }
+
+            // 生成标准正态分布的随机数 (Box-Muller transform)
+            const randomNormal = () => {
+                let u = 0, v = 0;
+                while (u === 0) u = Math.random();  //避免u为0
+                while (v === 0) v = Math.random();
+                return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+            }
+
+            const getChartsOption = (data) => {
+                let monthlyValues = data.monthlyValues;
+                if (monthlyValues == null) return {};
+
+                let o = {
+                    toolbox: {
+                        feature: {
+                            dataZoom: {
+                                yAxisIndex: 'none'
+                            },
+                            restore: {},
+                            saveAsImage: {}
+                        }
+                    },
+                    animationDuration: 500,
+                    title: {
+                        text: data.msg,
+                    },
+                    // tooltip: {
+                    //     trigger: 'axis'
+                    // },
+                    // legend: {
+                    //     data: ['1%', '10%', '30%', '50%', '70%', '90%', '99%']
+                    // },
+                    grid: {
+                        left: '0%',
+                        right: '120px',
+                        bottom: '0%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        boundaryGap: false,
+                        data: Array.from({ length: monthlyValues.length }, (_, i) => `月${i}`)/* 需要计算出所有月份的数组 */
+                    },
+                    yAxis: {
+                        type: 'value',
+                        axisLabel: {
+                            formatter: function (val) {
+                                return (val / 10000).toFixed(0).padStart(6, " ");
+                                if (val.toString().length > 4) {
+                                    return val.toString().substring(0, 4) + '…';
+                                } else {
+                                    return val;
+                                }
+                            }
+                        }
+                    },
+                    series: data.series,/* 根据simulations计算出的分位数数据构建的series数组 */
+                };
+                console.log(o);
+                return o;
+            };
+
+            return {
+                message,
+                form,
+                formAdjust,
+                option,
+                onDoCalculate,
+
+            }
+        }
+    }).use(ElementPlus).component('e-charts', VueECharts).mount('#app')
+</script>
+
+</html>
