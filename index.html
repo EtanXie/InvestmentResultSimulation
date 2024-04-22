@@ -89,11 +89,23 @@
             <el-text>参考资料： 有知有行《养老配置方案投资结果分布说明》<el-link type="primary" href="https://youzhiyouxing.cn/n/materials/1656"
                     target="_blank">https://youzhiyouxing.cn/n/materials/1656</el-link></el-text>
         </div>
-        <div>
-            <e-charts ref="chartRef" v-if="option.title != null" class="chart" :option="option" />
+        <div v-if="option.title != null">
+            <div style="margin: 1em 0;">
+                <el-text>
+                    说明：<br />
+                    [优X%]和[差X%]指的是概率值，优的X是距离100%的距离，差的X是距离0%的距离。<br />
+                    通过区间两端的指标数值，可以提供投资回报的参考。<br />
+                    如何使用：<br />
+                    落在[优1%]~[优5%]这个区间的概率为5%-1%=(100%-1%)-(100%-5%)=4%，<br />
+                    落在[优20%]~[差20%]这个区间的概率为(100%-20%)-20%=60%，<br />
+                    落在[中间]~[差20%]这个区间的概率为50%-20%=30%。<br />
+                    注意，[优10%]并不代表有10%的概率会落在这个值上，[中间]也不代表有50%会落在这个值上。区间概率分布才有意义。
+                </el-text>
+            </div>
+            <e-charts ref="chartRef" class="chart" :option="option" />
         </div>
-        <div>
-            <e-charts ref="chartRef2" v-if="option2.title != null" class="chart" :option="option2" />
+        <div v-if="option2.title != null">
+            <e-charts ref="chartRef2" class="chart" :option="option2" />
         </div>
     </div>
 </body>
