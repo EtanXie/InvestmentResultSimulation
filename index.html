@@ -47,7 +47,6 @@
 <body>
     <div id="app">
         <div>
-            <el-text type="primary">{{ message }}</el-text>
             <el-form :model="form" class="my-form" label-width="150px" label-position="left">
                 <el-form-item label="长钱账户">
                     <el-input class="my-input" v-model="form.cqzh" />
@@ -92,6 +91,7 @@
                     <el-button type="primary" @click="onDoCalculate(10000 * 3)">计算</el-button>
                 </el-form-item>
             </el-form>
+            <el-text type="primary">{{ message }}</el-text><br />
             <el-text>参考资料： 有知有行《养老配置方案投资结果分布说明》<el-link type="primary" href="https://youzhiyouxing.cn/n/materials/1656"
                     target="_blank">https://youzhiyouxing.cn/n/materials/1656</el-link></el-text>
         </div>
@@ -221,7 +221,7 @@
                     let startTime = dayjs();
                     onDoCalculate2(numSimulations);
                     console.log("Done, use " + dayjs().diff(startTime, "ms") + " ms");
-                }, 10);
+                }, 100);
             }
             const onDoCalculate2 = (numSimulations) => {
                 let totalMonth = 12 * form.value.investmentYears; // 投资总月数
